@@ -1,0 +1,52 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assignment Submission Portal</title>
+  <style>
+    body { font-family: Arial; max-width: 700px; margin: 50px auto;
+           padding: 20px; background: #f2f5fa; color: #172033; }
+    main { background: white; padding: 28px; border-radius: 12px; }
+    input, button { box-sizing: border-box; width: 100%; padding: 12px;
+                    margin: 8px 0 16px; }
+    button { background: #155eef; color: white; border: 0; cursor: pointer; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Assignment Submission Portal</h1>
+  <p>Static demonstration of the assignment submission workflow.</p>
+  <form id="form">
+    <label>Student Name</label>
+    <input name="name" required>
+    <label>Registration Number</label>
+    <input name="registration" required>
+    <label>Assignment Title</label>
+    <input name="title" required>
+    <label>Submission URL</label>
+    <input name="url" type="url" placeholder="https://example.com" required>
+    <button>Validate Demo Submission</button>
+  </form>
+  <p id="result"></p>
+</main>
+<script>
+document.getElementById('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(this));
+  let url;
+  try { url = new URL(d.url); } catch {
+    document.getElementById('result').textContent = 'Invalid URL';
+    return;
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    document.getElementById('result').textContent = 'Invalid URL';
+    return;
+  }
+  document.getElementById('result').textContent =
+    'Demo validation passed for ' + d.name + '. This static demo does not save to the server.';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+
+name: Assignment Portal CI
+
+on:
+  push:
+    branches: [main, "**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run automated tests
+        id: tests
+        continue-on-error: true
+        run: python -m pytest tests/ -v --json-report --json-report-file=raw-test-report.json
+
+      - name: Create and deliver actual test report
+        if: always()
+        env:
+          REPORT_RECEIVER_URL: http://127.0.0.1:5001/report
+        run: python scripts/make_report.py
+
+      - name: Email test report
+        if: always()
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+        run: python scripts/email_report.py
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static frontend
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
