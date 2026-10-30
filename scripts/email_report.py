@@ -11,14 +11,24 @@ if not report_path.exists():
 
 report = json.loads(report_path.read_text(encoding="utf-8"))
 
-host = os.getenv("SMTP_HOST")
-port = int(os.getenv("SMTP_PORT", "587"))
-username = os.getenv("SMTP_USERNAME")
-password = os.getenv("SMTP_PASSWORD")
-recipient = os.getenv("REPORT_EMAIL_TO")
+host = (os.getenv("SMTP_HOST") or "").strip()
+port_value = (os.getenv("SMTP_PORT") or "587").strip()
+username = (os.getenv("SMTP_USERNAME") or "").strip()
+password = (os.getenv("SMTP_PASSWORD") or "").strip()
+recipient = (os.getenv("REPORT_EMAIL_TO") or "").strip()
 
 if not all([host, username, password, recipient]):
-    raise SystemExit("Configure SMTP GitHub Secrets before sending email")
+    raise SystemExit(
+        "Email not sent: configure SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, "
+        "and REPORT_EMAIL_TO in GitHub Actions Secrets"
+    )
+
+try:
+    port = int(port_value)
+except ValueError:
+    raise SystemExit("SMTP_PORT must be a valid integer")
+if not 1 <= port <= 65535:
+    raise SystemExit("SMTP_PORT must be between 1 and 65535")
 
 message = EmailMessage()
 message["Subject"] = (
@@ -51,9 +61,25 @@ message.add_attachment(
     filename="test-report.json"
 )
 
-with smtplib.SMTP(host, port) as server:
-    server.starttls()
-    server.login(username, password)
-    server.send_message(message)
+if port == 465:
+    smtp_connection = smtplib.SMTP_SSL(host, port, timeout=30)
+else:
+    smtp_connection = smtplib.SMTP(host, port, timeout=30)
+
+try:
+    with smtp_connection as server:
+        server.ehlo()
+        if port != 465:
+            server.starttls()
+            server.ehlo()
+        server.login(username, password)
+        server.send_message(message)
+except (smtplib.SMTPException, OSError) as exc:
+    security = "implicit SSL" if port == 465 else "STARTTLS"
+    raise SystemExit(
+        f"Email delivery failed via {host}:{port} ({security}): "
+        f"{type(exc).__name__}: {exc}. Check SMTP secrets and server settings. "
+        "For Gmail, use an App Password (not the normal account password)."
+    ) from exc
 
 print("Test report email sent successfully")

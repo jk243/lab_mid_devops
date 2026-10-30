@@ -39,7 +39,7 @@ jobs:
         run: python scripts/make_report.py
 
       - name: Email test report
-        if: always()
+        if: ${{ always() }}
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
