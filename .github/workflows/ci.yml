@@ -40,6 +40,7 @@ jobs:
 
       - name: Email test report
         if: ${{ always() }}
+        continue-on-error: true
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
